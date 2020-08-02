@@ -5,8 +5,28 @@ az login
 az group create --name shinyapps --location northeurope
 
 #create container registry 
-az acr create -n shinyimages -g shinyapps -sku Basic
+az acr create -n shinyimages -g shinyapps --sku Basic --admin-enabled true
 
 #create an app service plan
-az appservice plan create -g shinyapps -n shinyappplan --sku FREE --is-linux
+az appservice plan create -g shinyapps -n shinyappplan --sku B1 --is-linux
 
+#log on to remote acr
+docker login shinyimages.azurecr.io
+
+#tag the image to be pushed out
+docker tag shiny_app shinyimages.azurecr.io/shiny_app
+
+#push containers to remote acr
+docker push shinyimages.azurecr.io/shiny_app
+
+#check images on acr
+az acr repository list -n shinyimages
+
+#deploy image on Azure
+az webapp create -g shinyapps -p shinyappplan -n myshinyapp -i shinyimages.azurecr.io/shiny_app
+
+#deploy a multicontainer app using docker compose
+az webapp create -g shinyapps -p shinyappplan -n myshinyapp --multicontainer-config-type compose --multicontainer-config-file docker-compose.yml
+
+#delete resource group when done 
+az group delete -n shinyapps
